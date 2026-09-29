@@ -44,9 +44,15 @@ public class DataSeeder {
         tourRepository.saveAll(defaultTours());
       }
 
-      if (tourDepartureRepository.count() == 0) {
+      boolean generatedNewDepartures = false;
+      List<TourDeparture> newDepartures = new ArrayList<>();
+      List<TourDeparture> allDepartures = tourDepartureRepository.findAll();
+      
+      if (allDepartures.isEmpty() || allDepartures.stream().noneMatch(d -> !d.getDepartureDate().isBefore(LocalDate.now()))) {
         List<Tour> tours = tourRepository.findAll();
-        tourDepartureRepository.saveAll(defaultDepartures(tours));
+        newDepartures = defaultDepartures(tours);
+        tourDepartureRepository.saveAll(newDepartures);
+        generatedNewDepartures = true;
       }
 
       syncTourSlots(tourRepository, tourDepartureRepository);
@@ -55,6 +61,9 @@ public class DataSeeder {
         List<User> users = userRepository.findAll();
         List<TourDeparture> departures = tourDepartureRepository.findAll();
         bookingRepository.saveAll(generateBookings(users, departures));
+      } else if (generatedNewDepartures) {
+        List<User> users = userRepository.findAll();
+        bookingRepository.saveAll(generateBookings(users, newDepartures));
       }
 
       if (wishlistRepository.count() == 0) {
@@ -378,7 +387,7 @@ public class DataSeeder {
 
   private List<TourDeparture> generateDepartures(Tour tour) {
     List<TourDeparture> departures = new ArrayList<>();
-    LocalDate firstMonth = LocalDate.now().withDayOfMonth(1).plusMonths(1);
+    LocalDate firstMonth = LocalDate.now().withDayOfMonth(1);
     Random random = new Random();
 
     for (int monthOffset = 0; monthOffset < 5; monthOffset++) {
